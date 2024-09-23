@@ -5,11 +5,11 @@
  */
 
 const RESERVATION_URL = "https://resy.com/cities/new-york-ny/venues/minetta-tavern";
-const DATE_STR = "2024-10-21";
+const DATE_STR = "2024-10-24";
 const SEATS = 2;
 const BEST_TIME_STR = "7:00pm";
 const MIN_TIME_STR = "6:00pm";
-const MAX_TIME_STR = "9:00pm";
+const MAX_TIME_STR = "8:00pm";
 
 /**
  * ==========================

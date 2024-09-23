@@ -117,6 +117,38 @@ const completeBooking = async (
   }
 };
 
+const getWaitingDelay = () => {
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+
+  const withinSeconds = 2;
+  const withinMinutes = 1;
+
+  // Check if within X seconds of the hour
+  if (
+    (minutes === 59 && seconds >= 60 - withinSeconds) ||
+    (minutes === 0 && seconds <= withinSeconds)
+  ) {
+    return {
+      delay: 250,
+      description: `<1s`,
+    };
+  }
+  // Check if within X minutes of the hour
+  else if (minutes >= 60 - withinMinutes || minutes < withinMinutes) {
+    return {
+      delay: 1000 + (Math.random() - 0.5) * 400,
+      description: `a second`,
+    };
+  }
+  // Otherwise
+  return {
+    delay: 5_000 + (Math.random() - 0.5) * 2_000,
+    description: `5 seconds`,
+  };
+};
+
 test("book", async ({ page }) => {
   console.log(`==========================
 Attempting to book ${BASE_RESERVATION_URL}
@@ -169,8 +201,9 @@ allowed times: ${prettyTime(MIN_TIME)} to ${prettyTime(MAX_TIME)}
       console.log(`=== There are no tables available, sorry ===`);
       break;
     } else if (await notOnlineLoc.isVisible()) {
-      console.log("=== Online booking not available yet, waiting to retry ===");
-      await new Promise((r) => setTimeout(r, 500));
+      const { delay, description } = getWaitingDelay();
+      console.log(`Online booking not available yet, waiting ${description} to retry`);
+      await new Promise((r) => setTimeout(r, delay));
       page.reload();
     } else {
       throw new Error(`Unhandled use case`);
