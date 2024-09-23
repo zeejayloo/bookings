@@ -1,0 +1,12 @@
+dist
+node_modules
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.auth/
+/playwright/.cache/
+
+# IDE
+*.code-workspace
