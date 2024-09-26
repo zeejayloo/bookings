@@ -1,5 +1,3 @@
-import { DATES } from "../params.js";
-
 export type BookingDate = {
   year: number;
   month: number;
@@ -25,10 +23,10 @@ const parseSingleDate = (dateStr: string): BookingDate => {
   return { year, month, day };
 };
 
-export const getBookingDates = (): BookingDate[] => {
+export const parseBookingDates = (datesParam: string): BookingDate[] => {
   const dates: BookingDate[] = [];
 
-  const parts = DATES.split(",").map((part) => part.trim());
+  const parts = datesParam.split(",").map((part) => part.trim());
   for (const part of parts) {
     if (part.includes("-")) {
       // Handle range (e.g. "10/23 - 10/25")
@@ -55,24 +53,11 @@ export const getBookingDates = (): BookingDate[] => {
   return dates;
 };
 
-export const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
 export const prettifyDate = ({ month, day, year }: BookingDate) => {
-  const monthName = MONTH_NAMES[month - 1];
-  return `${monthName} ${day}, ${year}`;
+  if (year !== new Date().getFullYear()) {
+    return `${month}/${day}/${year}`;
+  }
+  return `${month}/${day}`;
 };
 
 export const compareDates = (date1: BookingDate, date2: BookingDate) => {

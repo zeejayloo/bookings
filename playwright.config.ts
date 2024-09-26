@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+export const TEST_TIMEOUT = 10 * 60_000;
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -8,7 +10,7 @@ export default defineConfig({
 
   reporter: "html",
   retries: 0,
-  timeout: 10 * 60_000,
+  timeout: TEST_TIMEOUT,
   workers: 1,
 
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */

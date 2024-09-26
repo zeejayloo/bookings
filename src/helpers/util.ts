@@ -1,5 +1,4 @@
 import { Page, TestInfo } from "playwright/test";
-import { RESERVATION_URL } from "../params.js";
 import { BookingDate } from "./bookingDate.js";
 import { BookingTime } from "./bookingTime.js";
 
@@ -9,7 +8,21 @@ export type BookingResult = {
   time: BookingTime;
 };
 
-export const BASE_RESERVATION_URL = RESERVATION_URL.split("?")[0];
+export type BookingRequest = {
+  baseUrl: string;
+  dates: BookingDate[];
+  times: BookingTime[];
+  seats: number;
+  autoBook: boolean;
+};
+
+export type BookingRequestForDate = {
+  baseUrl: string;
+  date: BookingDate;
+  times: BookingTime[];
+  seats: number;
+  autoBook: boolean;
+};
 
 export const sanitizeForFilename = (description: string) => {
   // Trim, remove invalid characters, and normalize

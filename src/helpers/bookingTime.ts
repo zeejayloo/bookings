@@ -1,5 +1,3 @@
-import { ALLOWED_TIME_WINDOW, BEST_TIME, PREFERRED_TIME_WINDOW } from "../params.js";
-
 export type BookingTime = {
   hour: number;
   minute: number;
@@ -30,52 +28,39 @@ const parseSingleTime = (timeStr: string): BookingTime => {
   return { hour, minute };
 };
 
-export const getPreferredBookingTimes = (): BookingTime[] => {
-  const bestTime = parseSingleTime(BEST_TIME);
-  const [minTimeStr, maxTimeStr] = PREFERRED_TIME_WINDOW.split("-").map((part) => part.trim());
-  const minTime = parseSingleTime(minTimeStr);
-  const maxTime = parseSingleTime(maxTimeStr);
-  const preferredTimes = new Array<BookingTime>(bestTime);
-  let increment = 15;
-  while (true) {
-    const earlierTime = addMinutes(bestTime, -1 * increment);
-    const laterTime = addMinutes(bestTime, increment);
-    const tooEarly = compareTimes(earlierTime, minTime) < 0;
-    const tooLate = compareTimes(laterTime, maxTime) > 0;
-    if (tooEarly && tooLate) {
-      return preferredTimes;
-    }
-    if (!tooEarly) {
-      preferredTimes.push(earlierTime);
-    }
-    if (!tooLate) {
-      preferredTimes.push(laterTime);
-    }
-    increment += 15;
-  }
-};
-
-export const getAllowedBookingTimes = (): BookingTime[] => {
-  const [minPrefStr, maxPrefStr] = PREFERRED_TIME_WINDOW.split("-").map((part) => part.trim());
+export const parseBookingTimes = (
+  bestTimeParam: string,
+  preferredWindowParam: string,
+  allowedWindowParam: string
+): { preferredTimes: BookingTime[]; allowedTimes: BookingTime[] } => {
+  const best = parseSingleTime(bestTimeParam);
+  const [minPrefStr, maxPrefStr] = preferredWindowParam.split("-").map((part) => part.trim());
   const minPref = parseSingleTime(minPrefStr);
   const maxPref = parseSingleTime(maxPrefStr);
-  const [minAllowedStr, maxAllowedStr] = ALLOWED_TIME_WINDOW.split("-").map((part) => part.trim());
-  const minAllowed = parseSingleTime(minAllowedStr);
-  const maxAllowed = parseSingleTime(maxAllowedStr);
+  const [minAllowStr, maxAllowStr] = allowedWindowParam.split("-").map((part) => part.trim());
+  const minAllow = parseSingleTime(minAllowStr);
+  const maxAllow = parseSingleTime(maxAllowStr);
+  const preferredTimes = new Array<BookingTime>(best);
   const allowedTimes = new Array<BookingTime>();
   let increment = 15;
   while (true) {
-    const earlierTime = addMinutes(minPref, -1 * increment);
-    const laterTime = addMinutes(maxPref, increment);
-    const tooEarly = compareTimes(earlierTime, minAllowed) < 0;
-    const tooLate = compareTimes(laterTime, maxAllowed) > 0;
-    if (tooEarly && tooLate) {
-      return allowedTimes;
+    const earlierTime = addMinutes(best, -1 * increment);
+    const laterTime = addMinutes(best, increment);
+    const prefTooEarly = compareTimes(earlierTime, minPref) < 0;
+    const prefTooLate = compareTimes(laterTime, maxPref) > 0;
+    const allowTooEarly = compareTimes(earlierTime, minAllow) < 0;
+    const allowTooLate = compareTimes(laterTime, maxAllow) > 0;
+    if (allowTooEarly && allowTooLate && prefTooEarly && prefTooLate) {
+      return { preferredTimes, allowedTimes };
     }
-    if (!tooEarly) {
+    if (!prefTooEarly) {
+      preferredTimes.push(earlierTime);
+    } else if (!allowTooEarly) {
       allowedTimes.push(earlierTime);
     }
-    if (!tooLate) {
+    if (!prefTooLate) {
+      preferredTimes.push(laterTime);
+    } else if (!allowTooLate) {
       allowedTimes.push(laterTime);
     }
     increment += 15;
