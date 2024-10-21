@@ -67,12 +67,12 @@ export const parseBookingTimes = (
   }
 };
 
-export const prettifyTime = ({ hour, minute }: BookingTime) => {
+export const prettifyBookingTime = ({ hour, minute }: BookingTime) => {
   const period = hour >= 12 ? "pm" : "am";
   let adjustedHour = hour % 12 || 12; // Convert 0 or 12 to 12
   const formattedMinute = minute.toString().padStart(2, "0"); // Ensure two digits for minutes
   return `${adjustedHour}:${formattedMinute}${period}`;
 };
 
-export const stringifyTime = ({ hour, minute }: BookingTime) =>
+export const stringifyBookingTime = ({ hour, minute }: BookingTime) =>
   `${hour}:${minute.toString().padStart(2, "0")}`;

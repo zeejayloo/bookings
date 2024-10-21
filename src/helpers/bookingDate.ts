@@ -53,14 +53,14 @@ export const parseBookingDates = (datesParam: string): BookingDate[] => {
   return dates;
 };
 
-export const prettifyDate = ({ month, day, year }: BookingDate) => {
+export const prettifyBookingDate = ({ month, day, year }: BookingDate) => {
   if (year !== new Date().getFullYear()) {
     return `${month}/${day}/${year}`;
   }
   return `${month}/${day}`;
 };
 
-export const compareDates = (date1: BookingDate, date2: BookingDate) => {
+export const compareBookingDates = (date1: BookingDate, date2: BookingDate) => {
   if (date1.year !== date2.year) {
     return date1.year - date2.year;
   }

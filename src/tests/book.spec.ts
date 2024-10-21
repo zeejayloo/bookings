@@ -1,40 +1,43 @@
 import { test } from "@playwright/test";
-import { prettifyDate } from "../helpers/bookingDate.js";
-import { prettifyTime } from "../helpers/bookingTime.js";
-import { prettifyDelay, prettifyDelayUntil } from "../helpers/delay.js";
+import { prettifyBookingDate } from "../helpers/bookingDate.js";
+import { prettifyBookingTime } from "../helpers/bookingTime.js";
 import { prepareRun } from "../helpers/prep.js";
-import { attemptBooking, login } from "../helpers/resy.js";
+import { attemptBooking, closeOffersPopup, login } from "../helpers/resy.js";
+import { prettifyDelay, prettifyTime } from "../helpers/time.js";
 import { BookingResult } from "../helpers/util.js";
 
 const printSuccessfulBooking = (result: BookingResult) => {
   if (result.type === "BOOKED") {
     console.log(
       `==========================
-Booked for ${prettifyDate(result.date)} at ${prettifyTime(result.time)}
+Booked for ${prettifyBookingDate(result.date)} at ${prettifyBookingTime(result.time)}
 ==========================`
     );
   } else {
     console.log(
       `==========================
-Tried to book ${prettifyDate(result.date)} at ${prettifyTime(result.time)}, but ${result.type}
+Tried to book ${prettifyBookingDate(result.date)} at ${prettifyBookingTime(result.time)}, but ${result.type}
 ==========================`
     );
   }
 };
 
-test("book", async ({ page }) => {
-  const { runMode, baseUrl, seats, dates, preferredTimes, allowedTimes } = prepareRun();
-  const { startMode, failureMode } = runMode;
+test("book", async ({ page }, testInfo) => {
+  const { runMode, failureMode, baseUrl, seats, dates, preferredTimes, allowedTimes } =
+    prepareRun();
 
   console.log(`==========================
 ${runMode.type === "DEV" ? `Test booking ${baseUrl}` : `Attempting to book ${baseUrl}`}
 user: ${runMode.login?.email ?? "NOT SPECIFIED"}
 seats: ${seats}
-dates: ${dates.map((d) => prettifyDate(d)).join(", ")} 
-preferred times: ${preferredTimes.map((t) => prettifyTime(t)).join(", ")} 
-allowed times: ${allowedTimes.map((t) => prettifyTime(t)).join(", ")}
-start booking: ${startMode.type === "DELAY" ? prettifyDelayUntil(startMode.startAt) : startMode.type}
-on failure: ${failureMode.type === "RETRY" ? `Retry every ${prettifyDelay(failureMode.delay)}` : failureMode.type}
+dates: ${dates.map((d) => prettifyBookingDate(d)).join(", ")} 
+preferred times: ${preferredTimes.map((t) => prettifyBookingTime(t)).join(", ")} 
+allowed times: ${allowedTimes.map((t) => prettifyBookingTime(t)).join(", ")}
+on failure: ${
+    failureMode.type === "RETRY"
+      ? `RETRY every ${prettifyDelay(failureMode.delay)}`
+      : failureMode.type
+  }
 ==========================`);
 
   console.log(`=== Going to ${baseUrl}`);
@@ -52,15 +55,30 @@ on failure: ${failureMode.type === "RETRY" ? `Retry every ${prettifyDelay(failur
     console.log(`=== Login successful`);
   }
 
-  if (startMode.type === "DELAY") {
-    const startAtTime = startMode.startAt.getTime();
-    const prettyStartAt = prettifyDelayUntil(startMode.startAt);
+  closeOffersPopup(page).catch((err) => {
+    console.log(`ERROR - error closing offers popup`, err);
+  });
 
-    let now = Date.now();
-    while (now < startAtTime) {
-      console.log(`=== Waiting until ${prettyStartAt} to start booking`);
-      await new Promise((r) => setTimeout(r, Math.min(10_000, startAtTime - now)));
-      now = Date.now();
+  /**
+   * Wait to start
+   */
+  if (runMode.startMode.type !== "NOW") {
+    while (true) {
+      const now = Date.now();
+      const startAt = runMode.startMode.at.getTime();
+      if (startAt <= now) {
+        break;
+      }
+      const delay = startAt - now;
+      console.log(
+        `=== ${prettifyTime(new Date())} Not starting until ${prettifyTime(runMode.startMode.at)}, \
+waiting ${prettifyDelay(delay)}`
+      );
+      if (delay > 1000) {
+        await new Promise((r) => setTimeout(r, delay / 2));
+      } else {
+        await new Promise((r) => setTimeout(r, delay));
+      }
     }
   }
 
@@ -70,8 +88,8 @@ on failure: ${failureMode.type === "RETRY" ? `Retry every ${prettifyDelay(failur
 
   const autoBook = !runMode.requiresHuman;
   while (true) {
-    console.log("=== Checking preferred times");
-    const preferredResult = await attemptBooking(page, {
+    console.log(`=== ${prettifyTime(new Date())} Checking preferred times`);
+    const preferredResult = await attemptBooking(page, testInfo, {
       baseUrl,
       dates,
       times: preferredTimes,
@@ -85,8 +103,8 @@ on failure: ${failureMode.type === "RETRY" ? `Retry every ${prettifyDelay(failur
 
     let allowedResult: BookingResult | undefined;
     if (allowedTimes.length) {
-      console.log("=== Checking allowed times");
-      allowedResult = await attemptBooking(page, {
+      console.log(`=== ${prettifyTime(new Date())} Checking allowed times`);
+      allowedResult = await attemptBooking(page, testInfo, {
         baseUrl,
         dates,
         times: allowedTimes,
@@ -102,11 +120,21 @@ on failure: ${failureMode.type === "RETRY" ? `Retry every ${prettifyDelay(failur
     if (failureMode.type === "RETRY") {
       // Randomize time slightly to add / subtract 20%
       const slightRandomization = 0.8 + Math.random() * 0.4;
-      const retryDelay = slightRandomization * failureMode.delay;
-      console.log(`=== Unable to book, waiting ${prettifyDelay(retryDelay)} to retry`);
+      const retryDelay = failureMode.delay * slightRandomization;
+      const now = Date.now();
+      if (runMode.stopMode.type !== "NEVER") {
+        if (now + retryDelay > runMode.stopMode.at.getTime()) {
+          console.log(`=== ${prettifyTime(new Date())} Unable to book`);
+          return;
+        }
+      }
+
+      console.log(
+        `=== ${prettifyTime(new Date())} Unable to book, waiting ${prettifyDelay(retryDelay)} to retry`
+      );
       await new Promise((r) => setTimeout(r, retryDelay));
     } else {
-      console.log(`=== Unable to book`);
+      console.log(`=== ${prettifyTime(new Date())} Unable to book`);
       return;
     }
   }

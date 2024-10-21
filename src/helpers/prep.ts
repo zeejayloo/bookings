@@ -1,4 +1,3 @@
-import { TEST_TIMEOUT } from "../../playwright.config.js";
 import {
   ALLOWED_TIME_WINDOW,
   BEST_TIME,
@@ -10,9 +9,11 @@ import {
   RETRY_DELAY,
   SEATS,
   START_AT,
+  STOP_AT,
 } from "../params.js";
 import { parseBookingDates } from "./bookingDate.js";
 import { parseBookingTimes } from "./bookingTime.js";
+import { parseFutureTimeWithSeconds } from "./time.js";
 
 const isTruthy = (param: string | undefined) =>
   param === "1" || param?.toLowerCase() === "true" || param?.toLowerCase() === "t";
@@ -32,59 +33,47 @@ export const prepareRun = () => {
   const datesStr = process.env.DATES ?? DATES;
   const bestTimeStr = process.env.BEST_TIME ?? BEST_TIME;
   const preferredTimesStr = process.env.PREFERRED_TIME_WINDOW ?? PREFERRED_TIME_WINDOW;
-  const allowedTimesStr = process.env.ALLOWED_TIME_WINDOW ?? ALLOWED_TIME_WINDOW;
+  const allowedTimesStr =
+    process.env.ALLOWED_TIME_WINDOW ?? ALLOWED_TIME_WINDOW ?? PREFERRED_TIME_WINDOW;
   const onFailure = process.env.ON_FAILURE ?? ON_FAILURE;
   const retryDelay = parseNumber(process.env.RETRY_DELAY) ?? RETRY_DELAY;
-  const startAtStr = process.env.START_AT ?? START_AT;
+  const startAt = process.env.START_AT ?? START_AT;
+  const stopAt = process.env.STOP_AT ?? STOP_AT;
 
-  // Figure out if there's a delay before starting to book
   let startMode;
-  if (!startAtStr || startAtStr.toLowerCase() === "now") {
+  if (startAt.toUpperCase() === "NOW") {
     startMode = { type: "NOW" as const };
   } else {
-    const [time, modifier] = startAtStr.split(/(am|pm)/i);
-    let [hour, minute, second] = time.split(":").map(Number);
-    if (second === undefined) {
-      second = 0;
-    }
-    if (modifier.toLowerCase() === "pm" && hour < 12) {
-      hour += 12;
-    } else if (modifier.toLowerCase() === "am" && hour === 12) {
-      hour = 0;
-    }
-    const now = new Date();
-    const startAt = new Date(now);
-    startAt.setHours(hour, minute, second);
-    // Ensure startAt is in the future
-    if (startAt < now) {
-      startAt.setDate(startAt.getDate() + 1);
-      // Again in case of daylight savings!?
-      startAt.setHours(hour, minute, second);
-    }
-    if (startAt.getTime() - now.getTime() > TEST_TIMEOUT - 60_000) {
-      throw new Error("START_AT is too far in the future");
-    }
-    startMode = { type: "DELAY" as const, startAt };
+    const startTime = parseFutureTimeWithSeconds(startAt);
+    startMode = { type: "SCHEDULED" as const, at: startTime };
   }
 
-  // Parse failure mode
-  let failureMode;
-  if (onFailure === "retry") {
-    failureMode = { type: "RETRY" as const, delay: retryDelay };
+  let stopMode;
+  if (stopAt.toUpperCase() === "NEVER") {
+    stopMode = { type: "NEVER" as const };
   } else {
+    const stopTime = parseFutureTimeWithSeconds(stopAt);
+    stopMode = { type: "SCHEDULED" as const, at: stopTime };
+  }
+
+  // Figure out if there's a delay before starting to book
+  let failureMode;
+  if (onFailure.toUpperCase() === "STOP") {
     failureMode = { type: "STOP" as const };
+  } else {
+    failureMode = { type: "RETRY", delay: retryDelay };
   }
 
   // Figure out the run mode
   let runMode;
   if (isDevMode) {
-    runMode = { type: "DEV" as const, requiresHuman, startMode, failureMode };
+    runMode = { type: "DEV" as const, requiresHuman, startMode, stopMode };
   } else {
     if (!email || !password) {
       throw new Error("EMAIL and PASSWORD required");
     }
     const login = { email, password };
-    runMode = { type: "REAL" as const, login, requiresHuman, startMode, failureMode };
+    runMode = { type: "REAL" as const, login, requiresHuman, startMode, stopMode };
   }
 
   // Clean up the url params
@@ -100,6 +89,7 @@ export const prepareRun = () => {
 
   return {
     runMode,
+    failureMode,
     baseUrl,
     seats,
     dates,
