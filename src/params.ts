@@ -21,37 +21,28 @@ export const REQUIRES_HUMAN = false;
  * lists "10/23, 10/25", or combos of both. A booking will be made for only
  * one of the dates. Write the dates in the order you'd prefer.
  */
-export const DATES = "10/25, 10/27, 10/28, 11/4 - 11/18";
+export const DATES = "11/5 - 11/18";
 
 /** Your ideal time for the reservation */
 export const BEST_TIME = "7:00pm";
 /** Your preferred times for the reservation */
 export const PREFERRED_TIME_WINDOW = "6:30pm - 8:30pm";
 /**
- * Your allowed times for the reservation. If you specified multiple dates,
- * will check all the dates for the preferred times before checking the
- * allowed times. If it's same or narrower than the preferred window, no
- * additional checks are done.
+ * Additional allowed times for the reservation. If you specified multiple dates,
+ * will check all the dates for the preferred times before checking the allowed.
  */
-export const ALLOWED_TIME_WINDOW = undefined;
+export const ALLOWED_TIME_WINDOW: string | undefined = undefined;
 
-/**
- * What to do if a table isn't found, options include "retry".
- * Anything else just stops after the first round of attempts.
- */
-export const ON_FAILURE = "retry";
+/** What to do if a table isn't found */
+export const ON_FAILURE: "STOP" | "RETRY" = "STOP";
 /** If retrying, the speed at which to retry */
-export const RETRY_DELAY = 1000;
+export const RETRY_DELAY = 100;
 
 /**
- * If you want to really hammer the site with a short retry delay,
- * consider setting a delayed start. It'll log you in first, but not
- * start trying to book until the specified time.
- *
- * Examples "11:59:55pm" or "now"
+ * Examples "12:00:00pm" or "NOW"
  */
-export const START_AT = "12:48:00pm";
+export const START_AT = "NOW";
 /**
- * Examples "12:01:00am" or "never"
+ * Examples "12:01:00am" or "NEVER"
  */
-export const STOP_AT = "12:48:30pm";
+export const STOP_AT = "NEVER";

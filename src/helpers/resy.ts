@@ -184,7 +184,8 @@ export const attemptBookingForDate = async (
       } else {
         console.log(`- Requires human to finish booking...`);
         await result.timeButton.click();
-        await new Promise((r) => setTimeout(r, 10 * 60_000));
+        // Wait to keep the browser open while human finishes the bookingg
+        await new Promise((r) => setTimeout(r, 60 * 60_000));
       }
     } else {
       console.log(
